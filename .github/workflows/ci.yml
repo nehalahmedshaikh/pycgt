@@ -20,8 +20,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -e ".[dev]"
+      # Two invocations on purpose. Passing an explicit path overrides
+      # `testpaths`, so a single combined command would silently skip one set.
       - name: Test
+        run: pytest -q
+      - name: Doctests
         run: pytest -q --doctest-modules src/pycgt
+      - name: Worked example runs
+        run: python examples/berlekamp_1988.py
 
   lint:
     runs-on: ubuntu-latest
