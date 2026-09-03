@@ -6,6 +6,42 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **The CGSuite oracle is now part of the repository** (`tools/cgsuite/`): a
+  headless driver and a build script, with every non-obvious step recorded.
+  CGSuite itself is not vendored — it is GPL and this library is MIT — so the
+  script clones it into a git-ignored directory. Every expected value in the
+  test suite traces back to this harness, which previously existed only in a
+  scratch directory.
+- **Benchmarks** (`benchmarks/run.py`), so performance claims are reproducible.
+  Reports wall-clock time alongside exact work counters taken from the memo
+  tables, because timings move with machine load while counters do not.
+
+### Changed
+
+- **Placement games are about twice as fast**, with no change to any computed
+  value — the benchmark's core-operation counts are identical before and after.
+  Profiling showed the board-geometry layer, not the game theory, dominated:
+  `normalise` alone was 58% of the cost of valuing a Domineering board while
+  the comparison core was 12%. Three fixes:
+  - `value` is memoised on the raw position. Previously only component values
+    were cached, so a position reachable by several move orders had its
+    decomposition and normalisation redone in full every time.
+  - `normalise` no longer searches for each variant's translation. Reflecting
+    an axis sends its largest coordinate to zero and not reflecting it means
+    subtracting its smallest, so the offset is known in advance; the old code
+    made two `min` passes and rebuilt the cell list per variant.
+  - `components` orders its output by seeding each search with the smallest
+    remaining cell, rather than sorting afterwards with a key that sorted every
+    component's cells. The resulting order is identical.
+
+  Measured: Domineering 2×12 2.06×, 4×5 1.98×, Cram 3×4 5.72×, Clobber 3×3
+  2.22×, the temperature of 2×11 1.55×. Roughly 2× is the ceiling for this
+  workload — geometry was 58% of it — so going further means reducing the
+  game-theoretic work itself.
+- CI lints `benchmarks` as well as `src`, `tests` and `examples`.
+
 ## [0.3.0] — 2026-09-03
 
 ### Added

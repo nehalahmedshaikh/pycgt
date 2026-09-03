@@ -40,11 +40,12 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: pip install -e ".[dev]"
-      # `examples` is included on purpose: it was omitted here while
-      # RELEASING.md checked it, so lint errors in an example could reach main.
+      # `examples` and `benchmarks` are included on purpose: anything not
+      # listed here is unlinted, and `examples` was omitted once while
+      # RELEASING.md checked it, so errors in an example could reach main.
       - name: Ruff
-        run: ruff check src tests examples
+        run: ruff check src tests examples benchmarks
       - name: Ruff format check
-        run: ruff format --check src tests examples
+        run: ruff format --check src tests examples benchmarks
       - name: Mypy
         run: mypy

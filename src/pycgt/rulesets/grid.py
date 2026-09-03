@@ -63,7 +63,7 @@ class Position:
     def placements(self, shape: Shape) -> list[frozenset[Cell]]:
         """Every way of laying ``shape`` on empty cells."""
         out = []
-        for r, c in sorted(self.cells):
+        for r, c in _cells_in_order(self):
             covered = frozenset((r + dr, c + dc) for dr, dc in shape)
             if covered <= self.cells:
                 out.append(covered)
@@ -81,21 +81,30 @@ class Position:
         Cells matter to each other only if some shape could cover both; for
         shapes made of orthogonally adjacent cells, that is exactly orthogonal
         connectivity.
+
+        Components come out ordered by their smallest cell. Seeding each search
+        with ``min(remaining)`` gets that for free, where sorting afterwards
+        cost a sort of every component's cells *per component* to build the
+        key -- and gives the identical order, since disjoint components have
+        distinct minima and the smallest cell is the first element of the
+        sorted list either way.
         """
         remaining = set(self.cells)
         out: list[Position] = []
         while remaining:
-            stack = [remaining.pop()]
-            group = set(stack)
+            start = min(remaining)
+            remaining.discard(start)
+            stack = [start]
+            group = [start]
             while stack:
                 r, c = stack.pop()
                 for nb in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
                     if nb in remaining:
                         remaining.remove(nb)
-                        group.add(nb)
+                        group.append(nb)
                         stack.append(nb)
             out.append(Position(frozenset(group)))
-        return sorted(out, key=lambda p: sorted(p.cells))
+        return out
 
     def normalise(self, *, transpose: bool = False) -> Position:
         """A canonical representative under translation and reflection.
@@ -104,27 +113,7 @@ class Position:
         columns preserves the value. For Domineering it does not -- transposing
         exchanges the players and negates -- so it defaults to false.
         """
-        if not self.cells:
-            return self
-        rows = [r for r, _ in self.cells]
-        cols = [c for _, c in self.cells]
-        hi_r, hi_c = max(rows), max(cols)
-        best: tuple[Cell, ...] | None = None
-        for flip_r in (False, True):
-            for flip_c in (False, True):
-                for swap in (False, True) if transpose else (False,):
-                    variant = []
-                    for r, c in self.cells:
-                        rr = (hi_r - r) if flip_r else r
-                        cc = (hi_c - c) if flip_c else c
-                        variant.append((cc, rr) if swap else (rr, cc))
-                    min_r = min(r for r, _ in variant)
-                    min_c = min(c for _, c in variant)
-                    key = tuple(sorted((r - min_r, c - min_c) for r, c in variant))
-                    if best is None or key < best:
-                        best = key
-        assert best is not None
-        return Position(frozenset(best))
+        return _normalised(self, transpose)
 
     def __str__(self) -> str:
         if not self.cells:
@@ -138,6 +127,63 @@ class Position:
             )
             for r in range(min(rows), max(rows) + 1)
         )
+
+
+@cache
+def _cells_in_order(position: Position) -> tuple[Cell, ...]:
+    """The cells in a fixed order, computed once per position.
+
+    Placement search needs a deterministic order so that replay certificates
+    are reproducible, but re-sorting on every call was measurable.
+    """
+    return tuple(sorted(position.cells))
+
+
+@cache
+def _normalised(position: Position, transpose: bool) -> Position:
+    """The canonical representative of ``position`` under its symmetries.
+
+    Reflecting an axis maps its largest coordinate to zero, and not reflecting
+    it means subtracting its smallest, so **the translation is known in advance**
+    and no pass over the cells is needed to discover it. Computing it per
+    variant instead -- two ``min`` calls and a second rebuild of the cell list --
+    was the single largest cost in valuing a Domineering board.
+    """
+    cells = position.cells
+    if not cells:
+        return position
+    lo_r = min(r for r, _ in cells)
+    hi_r = max(r for r, _ in cells)
+    lo_c = min(c for _, c in cells)
+    hi_c = max(c for _, c in cells)
+    best: tuple[Cell, ...] | None = None
+    for flip_r in (False, True):
+        for flip_c in (False, True):
+            for swap in (False, True) if transpose else (False,):
+                if swap:
+                    key = tuple(
+                        sorted(
+                            (
+                                (hi_c - c) if flip_c else (c - lo_c),
+                                (hi_r - r) if flip_r else (r - lo_r),
+                            )
+                            for r, c in cells
+                        )
+                    )
+                else:
+                    key = tuple(
+                        sorted(
+                            (
+                                (hi_r - r) if flip_r else (r - lo_r),
+                                (hi_c - c) if flip_c else (c - lo_c),
+                            )
+                            for r, c in cells
+                        )
+                    )
+                if best is None or key < best:
+                    best = key
+    assert best is not None
+    return Position(frozenset(best))
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,8 +204,15 @@ class Ruleset:
         return [m for s in self.right_shapes for m in position.placements(s)]
 
 
+@cache
 def value(position: Position, ruleset: Ruleset) -> Game:
-    """The exact canonical value of ``position`` under ``ruleset``."""
+    """The exact canonical value of ``position`` under ``ruleset``.
+
+    Memoised on the *raw* position, not just on normalised components. Without
+    that, a position reached by several different move orders had its
+    decomposition and normalisation redone in full every time, even though the
+    component values behind it were already known.
+    """
     components = position.components()
     if not components:
         return ZERO
