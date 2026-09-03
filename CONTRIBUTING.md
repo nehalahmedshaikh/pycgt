@@ -2,16 +2,37 @@
 
 ## Running the checks
 
+Python 3.11 or newer is required. On Debian or Ubuntu, first install the
+standard-library virtual-environment module:
+
 ```console
-$ pip install -e ".[dev]"
-$ pytest -q                              # 162 tests, about 2.5 minutes
-$ pytest -q --doctest-modules src/pycgt   # docstring examples
-$ ruff check src tests
-$ ruff format --check src tests
-$ mypy                                    # strict
+$ sudo apt install python3-venv
 ```
 
-All five must pass. CI runs them on Linux, Windows and macOS across Python
+Create and activate an isolated environment:
+
+```console
+# Linux and macOS
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+
+# Windows PowerShell
+> py -3.11 -m venv .venv
+> .venv\Scripts\Activate.ps1
+```
+
+```console
+$ python -m pip install -e ".[dev]"
+$ pytest -q
+$ pytest -q --doctest-modules src/pycgt
+$ python examples/berlekamp_1988.py
+$ python examples/misere_genus.py
+$ ruff check src tests examples benchmarks
+$ ruff format --check src tests examples benchmarks
+$ mypy
+```
+
+These are the checks CI runs on Linux, Windows and macOS across Python
 3.11–3.13.
 
 ## The one rule that matters

@@ -14,7 +14,7 @@ Guy, "Unsolved Problems in Combinatorial Games", Games of No Chance (1996),
     Problem 4, recording David Wolfe's computation of the 4x5 board.
 Uiterwijk, "An update on Domineering on rectangular boards", arXiv:1305.3257,
     which prints the value of the 11x2 board.
-CGSuite 2.2 (github.com/aaron-siegel/cgsuite), run headlessly on
+CGSuite 2.2 beta 2 (github.com/aaron-siegel/cgsuite), run headlessly on
     game.grid.Domineering(Grid.Empty(r, c)).CanonicalForm and .Temperature
     and .Mean.
 """

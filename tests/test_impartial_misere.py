@@ -6,7 +6,7 @@ value this library computed and then enshrined.
 
 Sources
 -------
-CGSuite 2.2 (github.com/aaron-siegel/cgsuite), run headlessly on
+CGSuite 2.2 beta 2 (github.com/aaron-siegel/cgsuite), run headlessly on
     ``game.heap.TakeAndBreak(code)(n)`` for ``.NimValue``,
     ``.MisereNimValue``, ``.Genus``, and ``.MisereCanonicalForm.IsTame``,
     plus ``.MisereCanonicalForm + *[2] + ...`` for the genus superscript.

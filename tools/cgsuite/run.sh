@@ -19,8 +19,13 @@ to_native() {
     if command -v cygpath >/dev/null 2>&1; then cygpath -m "$1"; else printf '%s\n' "$1"; fi
 }
 
+java_cmd="java"
+if [ -n "${JAVA_HOME:-}" ]; then
+    java_cmd="$JAVA_HOME/bin/java"
+fi
+
 # -Xss1g is not optional: CGSuite recurses deeply and the default stack
 # overflows on larger positions. Logback chatter goes to stdout, so drop it.
-java -Xss1g -Xmx6g \
+"$java_cmd" -Xss1g -Xmx6g \
     -cp "$(cat "$build/classpath.txt")$sep$(to_native "$build/driver")" \
     Evaluate "$(to_native "$1")" | grep -v '^\['

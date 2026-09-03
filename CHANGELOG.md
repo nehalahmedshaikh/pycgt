@@ -11,9 +11,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **The CGSuite oracle is now part of the repository** (`tools/cgsuite/`): a
   headless driver and a build script, with every non-obvious step recorded.
   CGSuite itself is not vendored — it is GPL and this library is MIT — so the
-  script clones it into a git-ignored directory. Every expected value in the
-  test suite traces back to this harness, which previously existed only in a
-  scratch directory.
+  script clones it into a git-ignored directory. CGSuite-derived values can now
+  be reproduced with this checked-in harness, which previously existed only in
+  a scratch directory.
 - **Benchmarks** (`benchmarks/run.py`), so performance claims are reproducible.
   Reports wall-clock time alongside exact work counters taken from the memo
   tables, because timings move with machine load while counters do not.
@@ -61,6 +61,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   workload — geometry was 58% of it — so going further means reducing the
   game-theoretic work itself.
 - CI lints `benchmarks` as well as `src`, `tests` and `examples`.
+- Package metadata uses the current SPDX license fields instead of deprecated
+  Setuptools license metadata.
 
 ## [0.3.0] — 2026-09-03
 

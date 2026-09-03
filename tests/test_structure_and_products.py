@@ -6,11 +6,11 @@ agreements, and both are explained where they appear.
 
 Sources
 -------
-CGSuite 2.2, on ``CanonicalShortGame``: ``StopCount``, ``Companion``,
+CGSuite 2.2 beta 2, on ``CanonicalShortGame``: ``StopCount``, ``Companion``,
     ``Freeze``, ``Cool``, ``IsEvenTempered``, ``IsOddTempered``,
     ``NortonProduct``, ``FollowerCount``, ``Followers``; and on
     ``NormalValue``: ``IsNumberish``, ``IsNumberTiny``, ``IsIdempotent``.
-CGSuite 2.2, on ``Game``: ``ConjunctiveSum``, ``SelectiveSum``.
+CGSuite 2.2 beta 2, on ``Game``: ``ConjunctiveSum``, ``SelectiveSum``.
 """
 
 from __future__ import annotations

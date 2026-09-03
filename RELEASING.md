@@ -2,14 +2,8 @@
 
 ## Before tagging
 
-```console
-$ pytest -q                                # full suite
-$ pytest -q --doctest-modules src/pycgt    # docstring examples
-$ ruff check src tests examples
-$ ruff format --check src tests examples
-$ mypy                                     # strict
-$ python examples/berlekamp_1988.py        # the worked example still runs
-```
+Run every check in [`CONTRIBUTING.md`](CONTRIBUTING.md). The commands below
+assume a POSIX shell; cut releases from Linux or macOS.
 
 Bump `version` in `pyproject.toml`, move the `Unreleased` heading in
 `CHANGELOG.md` down to the new version, and date it.
@@ -22,10 +16,10 @@ at the start of `pyproject.toml` makes every TOML parser reject the file with
 ## Build and verify
 
 ```console
-$ pip install --upgrade build twine
+$ python -m pip install --upgrade build twine
 $ rm -rf dist build
 $ python -m build
-$ twine check dist/*
+$ python -m twine check dist/*
 ```
 
 `twine check` validates the metadata and confirms the README renders on PyPI.
@@ -58,14 +52,14 @@ and it does not consume the real version number. TestPyPI needs its own
 account and its own token.
 
 ```console
-$ twine upload --repository testpypi dist/*
-$ pip install --index-url https://test.pypi.org/simple/ --no-deps pycgt
+$ python -m twine upload --repository testpypi dist/*
+$ python -m pip install --index-url https://test.pypi.org/simple/ --no-deps pycgt
 ```
 
 Then the real thing:
 
 ```console
-$ twine upload dist/*
+$ python -m twine upload dist/*
 ```
 
 Twine prompts for credentials, so nothing has to be stored anywhere. If you
@@ -89,14 +83,13 @@ upload needs an account-wide token because the project is not there yet.
 
 ## After uploading
 
-A version on PyPI is permanent. It can be *yanked* (hidden from resolution)
-but never replaced or re-uploaded — fixes ship as a new version. So the
-release is over once it lands.
+A version on PyPI can be *yanked* (hidden from resolution) but never replaced
+or re-uploaded; fixes require a new version.
 
 ```console
-$ git tag -a v0.1.0 -m "v0.1.0"
-$ git push origin v0.1.0
-$ gh release create v0.1.0 --generate-notes dist/*
+$ git tag -a vX.Y.Z -m "vX.Y.Z"
+$ git push origin vX.Y.Z
+$ gh release create vX.Y.Z --generate-notes dist/*
 ```
 
 Set the repository homepage to the PyPI page once it is live:

@@ -1,9 +1,17 @@
 # The CGSuite oracle
 
-Almost every expected value in `pycgt`'s test suite was produced by
-[CGSuite](https://www.cgsuite.org/), Aaron Siegel's system and the standard tool
-in this field. This directory holds what is needed to reproduce that: a headless
-driver and the build recipe.
+Many external reference values in `pycgt`'s tests came from
+[CGSuite](https://www.cgsuite.org/), Aaron Siegel's standard system for the
+field. This directory contains a headless driver and its build recipe.
+
+## Desktop application versus oracle
+
+For interactive use, install CGSuite's official stable release (`.sh` on Linux
+or `.exe` on Windows); it bundles a Java runtime. The desktop application has
+no batch evaluator. Automated queries therefore use
+`org.cgsuite.lang.System.evaluateOrException` through
+[`Evaluate.scala`](Evaluate.scala), which reads one expression per line and
+prints one `expression<TAB>result` line.
 
 **CGSuite itself is deliberately not vendored here.** It is GPL and `pycgt` is
 MIT, so its source must stay outside this repository. You clone and build it
@@ -11,22 +19,34 @@ yourself; `build.sh` does that into `build/`, which is git-ignored. Nothing in
 `pycgt` links against it — it is a test oracle, run as a separate process, and
 its implementation was never consulted beyond the API needed to invoke it.
 
-## Why a driver at all
-
-CGSuite is a Java desktop application. It has no batch mode, so getting a table
-of values out of it means calling
-`org.cgsuite.lang.System.evaluateOrException` directly.
-[`Evaluate.scala`](Evaluate.scala) does that: one expression per input line, one
-`expression<TAB>result` line out.
-
 ## Build
+
+The oracle build needs Git, Maven, Bash and a **JDK 17** (not just a JRE).
+
+On 64-bit x86 Ubuntu:
+
+```console
+$ sudo apt install openjdk-17-jdk-headless maven
+$ export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+```
+
+On Windows, run the scripts from Git Bash after installing JDK 17 and Maven,
+putting `mvn` on `PATH`, and setting `JAVA_HOME` to the JDK 17 directory. Use a
+Git Bash path such as `/c/Program Files/Java/jdk-17` for `JAVA_HOME`.
+
+`JAVA_HOME` selects JDK 17 even when a newer JDK is the system default. Both
+scripts honor it directly, so changing the system-wide Java alternative is
+unnecessary.
 
 ```console
 $ ./build.sh
 ```
 
-That clones CGSuite, compiles its core, writes the classpath to
-`build/classpath.txt`, and compiles the driver to `build/driver/`.
+That clones CGSuite 2.2 beta 2, compiles its core, writes the classpath to
+`build/classpath.txt`, and compiles the driver to `build/driver/`. The version
+is pinned for reproducibility. Stable 2.1.1 supports core, thermography and
+misère queries, but lacks the `game.graph` package used for this project's Col
+and Snort fixtures; that package is present in 2.2 beta 2.
 
 Four things about that build are not obvious, and each one cost real time:
 
@@ -35,7 +55,8 @@ Four things about that build are not obvious, and each one cost real time:
    installation; `build.sh` checks the version and stops if it is wrong.
 2. **Stop at `compile`, not `package`.** CGSuite's `package` phase runs a
    `PostBuildScript` step that fails, and it is irrelevant to us. Build with
-   `mvn -pl lib/core compile` and run against `lib/core/target/classes`.
+   `mvn -f lib/core/pom.xml compile` and run against
+   `lib/core/target/classes`.
 3. **The classpath must come from Maven**, via
    `mvn dependency:build-classpath`. There are a dozen transitive jars and
    guessing them is hopeless.
@@ -51,14 +72,8 @@ Four things about that build are not obvious, and each one cost real time:
 $ ./run.sh queries.txt
 ```
 
-Or directly:
-
-```console
-$ java -Xss1g -Xmx6g -cp "$(cat build/classpath.txt);build/driver" Evaluate queries.txt
-```
-
-`-Xss1g` matters: CGSuite recurses deeply and the default stack overflows on
-larger positions. On Linux and macOS the classpath separator is `:`, not `;`.
+`run.sh` handles each platform's path and classpath syntax and gives Java the
+large stack CGSuite needs for deeper searches.
 
 A query file is one CGScript expression per line; blank lines and `#` comments
 are skipped.
