@@ -41,6 +41,7 @@ from pycgt import (
     tiny,
 )
 from pycgt.rulesets import domineering
+from pycgt.rulesets.grid import value
 
 # --- Berlekamp 1988, Appendix B.1 ----------------------------------------
 # G_n is the board 2 columns wide and 2n rows tall. He gives exact values
@@ -171,3 +172,27 @@ def test_number_temperature_convention_matches_cgsuite():
     """CGSuite reports temperature -1 for 0 and -1/2 for 1/2."""
     assert temperature(number(0)) == Fraction(-1)
     assert temperature(number("1/2")) == Fraction(-1, 2)
+
+
+# --- a published high-temperature position -------------------------------
+# Mazur (2026), "A Domineering temperature counterexample": a 28-cell position
+# inside an 11x8 rectangle with value {17/8 | -2*}. The hottest published
+# Domineering value we are aware of, so it exercises both the value
+# computation and the thermograph harder than anything else here.
+
+
+def test_published_high_temperature_position_value(high_temperature_position):
+    v = value(high_temperature_position, domineering.DOMINEERING)
+    assert render(v) == "{17/8|-2*}"
+    assert temperature(v) == Fraction(33, 16)
+    assert mean(v) == Fraction(1, 16)
+
+
+def test_isolated_cells_do_not_change_the_value(
+    high_temperature_core, high_temperature_position
+):
+    """The value factors through the connected core."""
+    ruleset = domineering.DOMINEERING
+    assert value(high_temperature_core, ruleset) == value(
+        high_temperature_position, ruleset
+    )

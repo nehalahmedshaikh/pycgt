@@ -58,6 +58,7 @@ dependencies, so it also runs unchanged under Pyodide in a browser.
 | **Thermography** | heating, overheating, cooling, temperature, mean value |
 | **Notation** | render to readable text, and parse it back |
 | **Rulesets** | Domineering, Cram, Nim, Blue-Red Hackenbush |
+| **Reachability** | was a position arrived at by legal alternating play? with replay certificates |
 
 Games are only **partially** ordered, so `<=` and `>=` are defined but `<` and
 `>` deliberately are not — `not (G <= H)` does not imply `G > H`. Use
@@ -83,6 +84,36 @@ $ python examples/berlekamp_1988.py
   ok    G_2 = tiny-2
   ok    G_3 = +-1 + 2*tiny-2
 ```
+
+## Reachability
+
+Some authors count any finite region as a Domineering position; a stricter
+reading requires the empty cells to be **reachable from a rectangle** by legal
+play. A claim about, say, the maximum temperature in Domineering means
+different things under the two conventions, so reachability is part of the
+statement — and it is not something CGSuite answers.
+
+```python
+>>> from pycgt.rulesets import Position, domineering, reachable_from_rectangle, verify_replay
+>>> board = Position.rectangle(2, 3)
+>>> target = Position(board.cells - {(0, 0), (1, 0)})
+>>> replay = reachable_from_rectangle(target, 2, 3, domineering.DOMINEERING)
+>>> print(replay)
+1 moves from 6 cells (1 Left, 0 Right)
+    1. Left: (0,0) (1,0)
+>>> verify_replay(replay, domineering.DOMINEERING)
+True
+```
+
+The search returns a **certificate**, and `verify_replay` re-checks it from
+scratch — legality, alternation, and endpoint — without trusting the search.
+So a replay produced elsewhere, by another program or by hand, can be audited
+here.
+
+It works for any placement ruleset, not just Domineering. The reduction that
+makes it tractable: placements never overlap, so any partition of the filled
+region into legal shapes can be replayed in *any* order, and alternation
+constrains only the counts.
 
 ## Correctness
 

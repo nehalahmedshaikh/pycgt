@@ -6,5 +6,17 @@ known closed form, so they double as the library's validation suite.
 
 from . import cram, domineering, nim
 from .grid import Position, Ruleset, value
+from .reachable import Move, Replay, reachable_from_rectangle, verify_replay
 
-__all__ = ["Position", "Ruleset", "cram", "domineering", "nim", "value"]
+__all__ = [
+    "Move",
+    "Position",
+    "Replay",
+    "Ruleset",
+    "cram",
+    "domineering",
+    "nim",
+    "reachable_from_rectangle",
+    "value",
+    "verify_replay",
+]

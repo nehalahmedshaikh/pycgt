@@ -6,6 +6,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Reachability** (`pycgt.rulesets.reachable`): decide whether a placement-game
+  position could have been arrived at from a rectangle by legal alternating
+  play, and return a replay certificate. `verify_replay` re-checks a
+  certificate from scratch — legality, alternation and endpoint — so replays
+  produced elsewhere can be audited. Works for any ruleset whose shapes all
+  cover the same number of cells.
+- `partitions`, exposing the underlying constrained exact-cover search.
+- A published 28-cell Domineering position of temperature 33/16 in the test
+  suite, exercising the value computation, the thermograph, and the
+  reachability search on a 60-cell filled region.
+
 ## [0.1.0] — 2026-09-03
 
 First release.
