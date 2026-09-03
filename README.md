@@ -1,5 +1,10 @@
 # pycgt
 
+[![PyPI](https://img.shields.io/pypi/v/pycgt.svg)](https://pypi.org/project/pycgt/)
+[![Python versions](https://img.shields.io/pypi/pyversions/pycgt.svg)](https://pypi.org/project/pycgt/)
+[![CI](https://github.com/nehalahmedshaikh/pycgt/actions/workflows/ci.yml/badge.svg)](https://github.com/nehalahmedshaikh/pycgt/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Combinatorial game theory in pure Python — exact canonical forms, thermography, and game values.**
 
 ```python
