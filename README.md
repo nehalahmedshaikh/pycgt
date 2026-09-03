@@ -242,6 +242,21 @@ Honest about scope:
 - **Misère play covers impartial games only** — nim values, misère nim values,
   the genus, tame/wild. No partizan misère theory, no misère canonical forms,
   and no misère quotients.
+- **No atomic weights.** The atomic weight of *G* is the unique *W* with
+  *G* ∼ *W*·↑, where the relation quantifies over *all* games *X* and all
+  sufficiently large nimbers *m*. The obvious comparison test — never as large
+  as ↑, never as small as ↓ — is necessary but not sufficient: it brackets the
+  answer without pinning it, admitting five candidate weights for `^*` because
+  it drops exactly the "large nimber" clause. Deciding it properly needs
+  *Winning Ways*' two-ahead rule, and reconstructing that from memory is the
+  failure mode that produced the cooling bug, so it waits for the source. The
+  Norton product it is defined against is here, and `tools/cgsuite` regenerates
+  the reference values in one command.
+- **No `Companion`**, which needs the lattice automorphism from Siegel's
+  *Combinatorial Game Theory* III.2.
+- **`selective_sum` disagrees with CGSuite** — deliberately. See its docstring:
+  CGSuite's prose gives one definition and its values follow another, and the
+  two differ on 52 of 121 pairs.
 - **The genus is the classical one**, not CGSuite's *extended* genus. The two
   agree on the nim value and on the superscript sequence, which is what this
   library computes; CGSuite's printed symbol carries more. Kayles heaps 7, 10,
