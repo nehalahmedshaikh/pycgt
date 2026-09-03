@@ -41,7 +41,9 @@ dev = ["pytest>=7", "pytest-cov>=4", "mypy>=1.8", "ruff>=0.3"]
 
 [project.urls]
 Homepage = "https://github.com/nehalahmedshaikh/pycgt"
+Repository = "https://github.com/nehalahmedshaikh/pycgt"
 Issues = "https://github.com/nehalahmedshaikh/pycgt/issues"
+Changelog = "https://github.com/nehalahmedshaikh/pycgt/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["src"]
