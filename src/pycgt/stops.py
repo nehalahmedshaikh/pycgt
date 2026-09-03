@@ -15,13 +15,15 @@ import math
 from fractions import Fraction
 from functools import cache
 
-from .game import Game
+from .game import Game, add, canonical, negate
 from .values import as_number
 
 __all__ = [
     "confusion_interval",
     "is_hot",
     "is_infinitesimal",
+    "is_number_tiny",
+    "is_numberish",
     "is_tepid",
     "left_stop",
     "number_part",
@@ -106,3 +108,61 @@ def is_hot(g: Game) -> bool:
 def is_tepid(g: Game) -> bool:
     """Stops equal but not a number: infinitesimally shifted from a number."""
     return number_part(g) is not None and as_number(g) is None
+
+
+def is_numberish(g: Game) -> bool:
+    """True if ``g`` is infinitesimally close to some number.
+
+    Equivalently, both stops agree. Every number and every infinitesimal
+    qualifies; a hot game does not.
+
+    >>> from pycgt.game import add
+    >>> from pycgt.values import STAR, UP, integer, plus_minus
+    >>> is_numberish(add(integer(1), UP)), is_numberish(STAR)
+    (True, True)
+    >>> is_numberish(plus_minus(1))
+    False
+    """
+    return number_part(g) is not None
+
+
+def is_number_tiny(g: Game) -> bool:
+    """True if ``g`` is a number plus a tiny or miny value.
+
+    A *tiny* value has the form ``tiny-y`` = ``{0 || 0 | -y}``, and a *miny* is
+    its negative. Numbers themselves count, with a zero tiny part.
+
+    The argument ``y`` must have a positive Left stop, which rules out
+    ``tiny-0`` -- that is just ``^`` -- and ``tiny-*``. The boundary is
+    calibrated against CGSuite rather than taken from its wording: the
+    documented condition asks that the inner option be at most some negative
+    number, which would exclude ``tiny-(+-1)``, yet CGSuite reports that one as
+    number-tiny. A positive Left stop agrees with CGSuite on every case tested,
+    switches included.
+
+    >>> from pycgt.game import add
+    >>> from pycgt.values import STAR, UP, integer, miny, plus_minus, tiny
+    >>> is_number_tiny(tiny(2)), is_number_tiny(add(integer(1), miny(2)))
+    (True, True)
+    >>> is_number_tiny(integer(1)), is_number_tiny(add(integer(1), STAR))
+    (True, False)
+    >>> is_number_tiny(add(tiny(2), tiny(2)))
+    False
+    >>> is_number_tiny(UP), is_number_tiny(tiny(STAR))
+    (False, False)
+    >>> is_number_tiny(tiny(plus_minus(1)))
+    True
+    """
+    from .values import as_miny, as_tiny, number
+
+    c = canonical(g)
+    if as_number(c) is not None:
+        return True
+    part = number_part(c)
+    if part is None:
+        return False
+    rest = canonical(add(c, negate(number(part))))
+    argument = as_tiny(rest)
+    if argument is None:
+        argument = as_miny(rest)
+    return argument is not None and left_stop(argument) > 0

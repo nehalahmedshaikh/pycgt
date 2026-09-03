@@ -16,6 +16,7 @@ from pycgt import (
     is_number,
     mean,
     number,
+    number_part,
     overheat,
     parse,
     plus_minus,
@@ -75,11 +76,19 @@ def test_overheating_differs_from_heating_on_non_integer_numbers():
 
 
 def test_cooling_a_switch_freezes_at_its_temperature():
+    """At the temperature the mean is reached, but an infinitesimal remains.
+
+    Cooling ``+-1`` by exactly 1 leaves ``{1-1 | -1+1}`` = ``{0|0}``, which is
+    ``*`` and not 0; only strictly beyond the temperature is the value a plain
+    number. CGSuite agrees, and this test previously asserted the opposite.
+    """
     g = plus_minus(1)
     assert not is_number(cool(g, Fraction(1, 2)))
-    assert cool(g, Fraction(1)).is_zero
     assert temperature(g) == 1
     assert mean(g) == 0
+    assert render(cool(g, Fraction(1))) == "*"
+    assert number_part(cool(g, Fraction(1))) == 0
+    assert cool(g, Fraction(3, 2)).is_zero
 
 
 def test_temperature_and_mean_of_an_asymmetric_switch():
@@ -128,19 +137,26 @@ def test_thermograph_stays_at_the_mast_beyond_the_temperature():
     """Cooling is monotone: once frozen, always frozen at the same value.
 
     Getting this wrong is exactly the bug that a naive cool-and-test loop
-    produces, so it is pinned down here.
+    produces, so it is pinned down here. Mind the boundary: at the temperature
+    the mast has been reached but an infinitesimal may sit on top of it, so the
+    value is a plain number only strictly beyond.
     """
     for g in (plus_minus(1), parse("{2|-1/2}"), parse("{{{7/2|3/2}|{1|-1/2}}|-1}")):
         graph = thermograph(g)
         for extra in ("0", "1/16", "1/2", "3", "100"):
             t = graph.temperature + Fraction(extra)
             assert graph.at(t) == (graph.mast, graph.mast), f"{render(g)} at {t}"
-            assert cool(g, t) == number(graph.mast)
+            cooled = cool(g, t)
+            assert number_part(cooled) == graph.mast, f"{render(g)} at {t}"
+            if Fraction(extra) > 0:
+                assert cooled == number(graph.mast), f"{render(g)} at {t}"
 
 
 def test_cooling_is_monotone_in_temperature():
     g = parse("{{{7/2|3/2}|{1|-1/2}}|-1}")
     t = temperature(g)
-    frozen = [cool(g, t + Fraction(k, 16)) for k in range(8)]
+    frozen = [cool(g, t + Fraction(k, 16)) for k in range(1, 8)]
     assert all(f == frozen[0] for f in frozen)
     assert is_number(frozen[0])
+    # And at the temperature itself, the mean is already reached.
+    assert number_part(cool(g, t)) == mean(g)

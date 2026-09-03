@@ -19,17 +19,24 @@ import math
 from fractions import Fraction
 from functools import cache
 
-from .game import ZERO, Game, canonical, game, multiple, negate
+from .game import ZERO, Game, add, canonical, game, multiple, negate
 
 __all__ = [
     "DOWN",
     "STAR",
     "UP",
+    "as_miny",
+    "as_nimber",
     "as_number",
+    "as_up_multiple",
+    "as_tiny",
     "integer",
+    "is_integer",
+    "is_nimber",
     "is_number",
     "miny",
     "nimber",
+    "norton_product",
     "number",
     "plus_minus",
     "simplest_between",
@@ -108,6 +115,17 @@ def is_number(g: Game) -> bool:
     return as_number(g) is not None
 
 
+def is_integer(g: Game) -> bool:
+    """True if ``g`` is a whole number.
+
+    >>> from pycgt.game import ZERO
+    >>> is_integer(number(2)), is_integer(number("1/2")), is_integer(ZERO)
+    (True, False, True)
+    """
+    value = as_number(g)
+    return value is not None and value.denominator == 1
+
+
 @cache
 def number(value: Fraction | int | str) -> Game:
     """The canonical game whose value is the dyadic rational ``value``.
@@ -164,9 +182,99 @@ def nimber(n: int) -> Game:
     return canonical(Game(options, options))
 
 
+@cache
+def as_nimber(g: Game) -> int | None:
+    """If ``g`` is the nimber ``*n``, return ``n``; else None.
+
+    Detected structurally and without a bound: a canonical nimber has the same
+    options on both sides, and they are exactly the smaller nimbers.
+
+    >>> as_nimber(nimber(7)), as_nimber(UP)
+    (7, None)
+    """
+    if not g.left and not g.right:
+        return 0
+    if g.left != g.right:
+        return None
+    seen = set()
+    for option in g.left:
+        value = as_nimber(option)
+        if value is None:
+            return None
+        seen.add(value)
+    return len(seen) if seen == set(range(len(g.left))) else None
+
+
+def is_nimber(g: Game) -> bool:
+    """True if ``g`` is a nimber, zero included.
+
+    >>> is_nimber(nimber(3)), is_nimber(STAR), is_nimber(UP)
+    (True, True, False)
+    """
+    return as_nimber(canonical(g)) is not None
+
+
 def up_multiple(n: int) -> Game:
     """``n`` copies of ``^`` summed (negative ``n`` gives multiples of ``v``)."""
     return multiple(UP, n)
+
+
+@cache
+def as_up_multiple(g: Game) -> tuple[int, bool] | None:
+    """If ``g`` is ``n`` ups, optionally plus ``*``, return ``(n, has_star)``.
+
+    Negative ``n`` means downs. Returns ``(0, True)`` for ``*`` itself and
+    ``(0, False)`` for zero.
+
+    Recognised structurally, from the fact that ``n`` ups has canonical form
+    ``{0 | (n-1) ups + *}``, so there is no bound on ``n``. The result is then
+    confirmed by one equality, which makes a false positive impossible.
+
+    >>> as_up_multiple(up_multiple(5))
+    (5, False)
+    >>> as_up_multiple(canonical(add(up_multiple(3), STAR)))
+    (3, True)
+    >>> as_up_multiple(up_multiple(-2))
+    (-2, False)
+    >>> as_up_multiple(nimber(2)) is None
+    True
+    """
+    found = _as_ups(canonical(g))
+    if found is not None:
+        return found
+    found = _as_ups(canonical(negate(g)))
+    if found is None:
+        return None
+    count, star = found
+    return (-count, star)
+
+
+@cache
+def _as_ups(g: Game) -> tuple[int, bool] | None:
+    """The non-negative half of :func:`as_up_multiple`."""
+    if not g.left and not g.right:
+        return (0, False)
+    if g == STAR:
+        return (0, True)
+    # `^*` is the one shape that does not fit the spine below.
+    if g.left == frozenset({ZERO, STAR}) and g.right == frozenset({ZERO}):
+        return (1, True)
+    if g.left != frozenset({ZERO}) or len(g.right) != 1:
+        return None
+    below = _as_ups(next(iter(g.right)))
+    if below is None:
+        return None
+    count, star = below
+    if star:
+        result = (count + 1, False)
+    elif count >= 1:
+        result = (count + 1, True)
+    else:
+        return None
+    expected = (
+        add(up_multiple(result[0]), STAR) if result[1] else up_multiple(result[0])
+    )
+    return result if canonical(expected) == g else None
 
 
 def switch(left: Fraction | int | str, right: Fraction | int | str) -> Game:
@@ -200,3 +308,65 @@ def tiny(g: Game | Fraction | int | str) -> Game:
 def miny(g: Game | Fraction | int | str) -> Game:
     """``miny-g`` = ``-tiny-g``: a negative infinitesimal."""
     return negate(tiny(g))
+
+
+@cache
+def as_tiny(g: Game) -> Game | None:
+    """If ``g`` is ``tiny-x`` for some ``x``, return that ``x``; else None.
+
+    >>> as_tiny(tiny(2)) == number(2)
+    True
+    >>> as_tiny(STAR) is None
+    True
+    """
+    c = canonical(g)
+    if len(c.left) != 1 or len(c.right) != 1:
+        return None
+    if next(iter(c.left)) != ZERO:
+        return None
+    inner = next(iter(c.right))
+    if len(inner.left) != 1 or len(inner.right) != 1:
+        return None
+    if next(iter(inner.left)) != ZERO:
+        return None
+    candidate = canonical(negate(next(iter(inner.right))))
+    return candidate if c == canonical(tiny(candidate)) else None
+
+
+def as_miny(g: Game) -> Game | None:
+    """If ``g`` is ``miny-x`` for some ``x``, return that ``x``; else None."""
+    return as_tiny(canonical(negate(g)))
+
+
+def norton_product(g: Game, unit: Game) -> Game:
+    """The Norton product ``g . unit``, also written ``g`` copies of ``unit``.
+
+    For integer ``g`` this is literally that many copies summed. Otherwise
+
+        ``g . U = {g^L . U + (U + I) | g^R . U - (U + I)}``
+
+    where ``I`` ranges over the incentives of ``U``. Overheating in disguise:
+    the unit replaces the number 1 as the step by which play moves.
+
+    >>> from pycgt.notation import render
+    >>> render(norton_product(integer(3), UP))
+    '^3'
+    >>> render(norton_product(integer(2), STAR))
+    '0'
+    >>> render(norton_product(number("1/2"), UP))
+    '{^^*|v*}'
+    """
+    return _norton(canonical(g), canonical(unit))
+
+
+@cache
+def _norton(g: Game, unit: Game) -> Game:
+    from .game import incentives
+
+    count = as_number(g)
+    if count is not None and count.denominator == 1:
+        return multiple(unit, count.numerator)
+    steps = [add(unit, i) for i in incentives(unit)]
+    left = frozenset(add(_norton(l, unit), s) for l in g.left for s in steps)
+    right = frozenset(add(_norton(r, unit), negate(s)) for r in g.right for s in steps)
+    return canonical(Game(left, right))

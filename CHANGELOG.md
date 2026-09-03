@@ -17,6 +17,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Benchmarks** (`benchmarks/run.py`), so performance claims are reproducible.
   Reports wall-clock time alongside exact work counters taken from the memo
   tables, because timings move with machine load while counters do not.
+- **Structure** (`pycgt.structure`): `stop_count`, `is_even_tempered` and
+  `is_odd_tempered`, `followers` and `follower_count`, `is_idempotent`, and the
+  two sums that are not the disjunctive one — `conjunctive_sum` (move in both
+  components) and `selective_sum` (move in either or both).
+- **The Norton product** `norton_product(g, unit)`: `g` copies of `unit` for
+  integer `g`, and otherwise overheating in disguise, with the unit replacing 1
+  as the step play moves by. All twenty cases checked against CGSuite.
+- **`freeze`**: a game cooled by its own temperature, always infinitesimally
+  close to its mean.
+- Predicates to match CGSuite's: `is_integer`, `is_nimber`, `is_numberish`,
+  `is_number_tiny`; and the recognisers behind them, `as_nimber`, `as_tiny`,
+  `as_miny` and `as_up_multiple`.
+- **Notation** now names every multiple of up and down — `^`, `^^`, `^3`,
+  `v4`, with or without a trailing `*` — recognised structurally, so there is
+  no bound. It also reads the **multi-bar convention**, where `{A||B|C}` means
+  `{A|{B|C}}`, which is how *Winning Ways* and CGSuite both write nested games;
+  CGSuite's own output can now be parsed straight back in. Switch arguments are
+  parenthesised where the text would otherwise run together, so `{1*|-1*}`
+  prints as `+-(1*)` rather than the ambiguous `+-1*`. Everything `render`
+  produces, `parse` accepts.
 
 ### Changed
 
@@ -76,6 +96,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **`cool` froze one step too early.** It jumped to the mast whenever
+  `t >= temperature`, discarding the infinitesimal that survives *at* the
+  temperature: cooling `+-1` by exactly 1 leaves `{0|0}`, which is `*`, not 0.
+  Only strictly beyond the temperature is the value a plain number. `freeze`
+  evaluates at precisely that point, which is how the bug surfaced, and three
+  tests had encoded the wrong behaviour.
+- `freeze` raised on numbers. A number has negative temperature under this
+  library's convention and `cool` refuses a negative amount, so the case needs
+  handling rather than falling out; a number is already frozen.
 - `render` printed every nimber above `*5` as a switch: the named-value table
   stopped at `*5`, and since every nimber is its own negative, the ones past it
   matched the `+-X` rule added in 0.2.0, so `*6` came out as

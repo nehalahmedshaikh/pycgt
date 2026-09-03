@@ -3,15 +3,36 @@
 A value this module cannot name is printed in brace notation rather than
 guessed at. That is deliberate: an unfamiliar value is worth looking at, and a
 renderer that quietly approximates would hide exactly the interesting cases.
+
+Names follow CGSuite's conventions so that output can be compared directly:
+``*``, ``*2``; ``^``, ``^^``, ``^3``, ``^4``; the same with a trailing ``*``;
+``v`` for downs; ``Tiny(x)`` and ``Miny(x)``; ``+-x`` for switches; and a
+number written straight onto an infinitesimal, as in ``1*`` or ``1Tiny(2)``.
+
+Everything :func:`render` produces, :func:`parse` accepts.
 """
 
 from __future__ import annotations
 
+import re
 from fractions import Fraction
 from functools import cache
 
-from .game import ZERO, Game, add, canonical, game, negate
-from .values import DOWN, STAR, UP, as_number, nimber, number, tiny
+from .game import Game, add, canonical, game, negate
+from .stops import number_part
+from .values import (
+    STAR,
+    as_miny,
+    as_nimber,
+    as_number,
+    as_tiny,
+    as_up_multiple,
+    miny,
+    nimber,
+    number,
+    tiny,
+    up_multiple,
+)
 
 __all__ = ["parse", "render"]
 
@@ -20,82 +41,33 @@ def _format(x: Fraction) -> str:
     return str(x.numerator) if x.denominator == 1 else f"{x.numerator}/{x.denominator}"
 
 
-def _star(n: int) -> str:
+def _star_name(n: int) -> str:
     return "0" if n == 0 else "*" if n == 1 else f"*{n}"
 
 
-@cache
-def _as_nimber(g: Game) -> int | None:
-    """If ``g`` is the nimber ``*n``, return ``n``; else None.
-
-    Detected structurally and without a bound. A fixed table of small nimbers
-    is not enough: every nimber is its own negative, so any nimber the table
-    missed used to be caught by the ``+-X`` switch rule instead and printed as
-    ``+-{*,*2,*3,*4,*5,0}``.
-    """
-    if not g.left and not g.right:
-        return 0
-    if g.left != g.right:
-        return None
-    seen = set()
-    for option in g.left:
-        value = _as_nimber(option)
-        if value is None:
-            return None
-        seen.add(value)
-    return len(seen) if seen == set(range(len(g.left))) else None
-
-
-@cache
-def _named() -> dict[Game, str]:
-    """Small library of values with conventional names.
-
-    Nimbers are deliberately absent: :func:`_as_nimber` handles them all, so
-    there is no cap here to fall off.
-    """
-    table: dict[Game, str] = {}
-    table[canonical(UP)] = "^"
-    table[canonical(DOWN)] = "v"
-    table[canonical(add(UP, STAR))] = "^*"
-    table[canonical(add(DOWN, STAR))] = "v*"
-    table[canonical(add(UP, UP))] = "^^"
-    table[canonical(add(DOWN, DOWN))] = "vv"
-    return table
-
-
-def _as_tiny(g: Game) -> Game | None:
-    """If ``g`` is ``tiny-X``, return ``X``; else None."""
-    if len(g.left) != 1 or len(g.right) != 1:
-        return None
-    if next(iter(g.left)) != ZERO:
-        return None
-    inner = next(iter(g.right))
-    if len(inner.left) != 1 or len(inner.right) != 1:
-        return None
-    if next(iter(inner.left)) != ZERO:
-        return None
-    candidate = canonical(negate(next(iter(inner.right))))
-    return candidate if g == canonical(tiny(candidate)) else None
-
-
-def _as_miny(g: Game) -> Game | None:
-    inner = _as_tiny(canonical(negate(g)))
-    return inner
+def _up_name(count: int, star: bool) -> str:
+    """CGSuite's spelling: one and two are repeated, three and up are counted."""
+    letter = "^" if count > 0 else "v"
+    size = abs(count)
+    body = letter * size if size <= 2 else f"{letter}{size}"
+    return body + ("*" if star else "")
 
 
 @cache
 def render(g: Game) -> str:
     """Readable notation for ``g``.
 
-    Recognises numbers, small nimbers, ups and downs, tinies and minies,
+    Recognises numbers, nimbers, multiples of up and down, tinies and minies,
     switches, and a number plus any of those; anything else falls back to
     nested brace notation.
 
-    >>> from pycgt.values import number, plus_minus
+    >>> from pycgt.values import number, plus_minus, up_multiple
     >>> render(number("1/2"))
     '1/2'
     >>> render(plus_minus(1))
     '+-1'
+    >>> render(up_multiple(3))
+    '^3'
     """
     c = canonical(g)
 
@@ -103,48 +75,49 @@ def render(g: Game) -> str:
     if value is not None:
         return _format(value)
 
-    # Nimbers must be recognised before the switch rule below, because every
+    # Nimbers must come before the switch rule at the end, because every
     # nimber is its own negative and so matches that rule's pattern.
-    star = _as_nimber(c)
+    star = as_nimber(c)
     if star is not None:
-        return _star(star)
+        return _star_name(star)
 
-    names = _named()
-    if c in names:
-        return names[c]
+    # Multiples of up must come before tiny/miny: three ups *is* tiny-down, and
+    # `^3` is the name for it that anyone would expect.
+    ups = as_up_multiple(c)
+    if ups is not None and ups[0] != 0:
+        return _up_name(*ups)
 
-    # tiny / miny, whose arguments are often themselves interesting
-    argument = _as_tiny(c)
+    argument = as_tiny(c)
     if argument is not None:
         return f"Tiny({render(argument)})"
-    argument = _as_miny(c)
+    argument = as_miny(c)
     if argument is not None:
         return f"Miny({render(argument)})"
 
-    # A number plus a nimber, e.g. "1*" or "3/4*6". The options are the same on
-    # both sides, and exactly one of them -- the ``k = 0`` case -- is a number,
-    # since ``x + *k`` is not a number for positive ``k``. That names the only
-    # candidate, so it can be built once and compared. Subtracting the nimber
-    # instead is quadratic in it and unusably slow past about ``*8``.
-    if c.left and c.left == c.right:
-        found = [value for value in map(as_number, c.left) if value is not None]
-        if len(found) == 1 and add(number(found[0]), nimber(len(c.left))) == c:
-            return f"{_format(found[0])}{_star(len(c.left))}"
-
-    # a number plus a named infinitesimal, e.g. "1^" or "1/2v"
-    for named_game, name in names.items():
-        if named_game == ZERO:
-            continue
-        rest = as_number(canonical(c - named_game))
-        if rest is not None:
-            return f"{_format(rest)}{name}"
+    # A number written straight onto an infinitesimal: "1*", "1^^", "1Tiny(2)".
+    # Only when the infinitesimal part has a name of its own -- gluing a number
+    # onto a brace expression would be unreadable and would not parse back.
+    part = number_part(c)
+    if part is not None and part != 0:
+        rest = render(canonical(add(c, negate(number(part)))))
+        if "{" not in rest and rest != "0":
+            return f"{_format(part)}{rest}"
 
     # A switch +-X, where Right's options are exactly the negatives of Left's.
     # This covers +-1 and also cases whose arguments are not numbers, such as
     # +-{*,^}, which is how Clobber's four-stone row prints.
     if c.left and c.right == frozenset(canonical(negate(x)) for x in c.left):
         inner = ",".join(sorted(render(x) for x in c.left))
-        return f"+-{inner}" if len(c.left) == 1 else f"+-{{{inner}}}"
+        if len(c.left) > 1:
+            return f"+-{{{inner}}}"
+        # Parenthesise only where the text would otherwise run together, which
+        # is CGSuite's rule: `+-1*` reads as the switch `+-1` plus a star when
+        # `+-(1*)`, the switch between `1*` and `-1*`, is meant. A number needs
+        # no help, and a brace expression already delimits itself, so
+        # `+-{2|1}` stays as it is.
+        if as_number(next(iter(c.left))) is not None or inner.startswith("{"):
+            return f"+-{inner}"
+        return f"+-({inner})"
 
     # An asymmetric switch between two numbers.
     if len(c.left) == 1 and len(c.right) == 1:
@@ -164,17 +137,52 @@ def render(g: Game) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _split_top_level(text: str) -> tuple[str, str]:
-    """Split ``a|b`` on the bar outside any braces."""
-    depth = 0
-    for i, ch in enumerate(text):
+def _bar_runs(text: str) -> list[tuple[int, int]]:
+    """Every run of ``|`` outside braces, as ``(start, length)``."""
+    runs: list[tuple[int, int]] = []
+    depth = index = 0
+    while index < len(text):
+        ch = text[index]
         if ch == "{":
             depth += 1
         elif ch == "}":
             depth -= 1
         elif ch == "|" and depth == 0:
-            return text[:i], text[i + 1 :]
-    raise ValueError(f"no top-level '|' in {text!r}")
+            start = index
+            while index < len(text) and text[index] == "|":
+                index += 1
+            runs.append((start, index - start))
+            continue
+        index += 1
+    return runs
+
+
+def _split_top_level(text: str) -> tuple[str, str]:
+    """Split the inside of a brace expression into its Left and Right halves.
+
+    Handles the multi-bar convention, in which the *longest* run of bars is the
+    outermost separator, so ``{A || B | C}`` means ``{A | {B | C}}``. This is
+    how *Winning Ways* and CGSuite both write nested games, and being able to
+    read it is what lets CGSuite's own output be fed straight back in.
+    """
+    runs = _bar_runs(text)
+    if not runs:
+        raise ValueError(f"no top-level '|' in {text!r}")
+    widest = max(length for _, length in runs)
+    outermost = [start for start, length in runs if length == widest]
+    if len(outermost) != 1:
+        raise ValueError(
+            f"ambiguous separator in {text!r}: {len(outermost)} runs of "
+            f"{widest} bars at the top level"
+        )
+    cut = outermost[0]
+    left, right = text[:cut], text[cut + widest :]
+    # A half that still holds bars is itself a game, written without braces
+    # because the wider run already separated it.
+    if widest > 1:
+        left = f"{{{left}}}" if _bar_runs(left) else left
+        right = f"{{{right}}}" if _bar_runs(right) else right
+    return left, right
 
 
 def _parse_options(text: str) -> list[Game]:
@@ -194,19 +202,34 @@ def _parse_options(text: str) -> list[Game]:
     return [parse(p) for p in parts]
 
 
-def parse(text: str) -> Game:
-    """Parse brace notation, numbers, and the common named values.
+#: A leading dyadic rational, greedy so that "1/2" is one number rather than
+#: the number 1 followed by nonsense.
+_LEADING_NUMBER = re.compile(r"(-?\d+(?:/\d+)?)(.*)$", re.DOTALL)
 
-    Accepts ``0``, ``3/4``, ``-2``, ``*``, ``*3``, ``^``, ``v``, ``+-1``, and
-    brace expressions such as ``{1|-1}`` or ``{{2|0}|0}``. Options may be
-    comma-separated: ``{0,*|1}``.
+#: Multiples of up or down: "^", "^^", "^3", "v4", each optionally plus a star.
+#: The counted form is tried first so that "^3" is not read as "^" then "3".
+_UPS = re.compile(r"(\^\d+|\^+|v\d+|v+)(\*?)$")
+
+_TINY = re.compile(r"(Tiny|Miny)\((.*)\)$", re.DOTALL)
+
+
+def parse(text: str) -> Game:
+    """Parse brace notation, numbers, and the named values.
+
+    Accepts everything :func:`render` produces: ``0``, ``3/4``, ``-2``, ``*``,
+    ``*3``, ``^``, ``^^``, ``^3``, ``^3*``, ``v4``, ``Tiny(2)``, ``Miny(2)``,
+    ``+-1``, a number glued onto an infinitesimal such as ``1*`` or
+    ``1Tiny(2)``, and brace expressions such as ``{1|-1}`` or ``{{2|0}|0}``.
+    Options may be comma-separated: ``{0,*|1}``.
 
     >>> parse("{1|-1}") == parse("+-1")
     True
     >>> render(parse("{{2|0}|0}"))
     'Miny(2)'
-    >>> render(parse("{0|{0|-2}}"))
-    'Tiny(2)'
+    >>> render(parse("^3*"))
+    '^3*'
+    >>> render(parse("1Tiny(2)"))
+    '1Tiny(2)'
     """
     text = text.strip()
     if not text:
@@ -220,17 +243,34 @@ def parse(text: str) -> Game:
         argument = text[2:].strip()
         if argument.startswith("{") and argument.endswith("}"):
             options = _parse_options(argument[1:-1])
+        elif argument.startswith("(") and argument.endswith(")"):
+            options = [parse(argument[1:-1])]
         else:
             options = [parse(argument)]
         return game(options, [negate(o) for o in options])
 
+    found = _TINY.fullmatch(text)
+    if found is not None:
+        inner = parse(found.group(2))
+        return tiny(inner) if found.group(1) == "Tiny" else miny(inner)
+
+    found = _UPS.fullmatch(text)
+    if found is not None:
+        run, star = found.group(1), found.group(2)
+        size = int(run[1:]) if run[1:].isdigit() else len(run)
+        count = size if run[0] == "^" else -size
+        total = up_multiple(count)
+        return canonical(add(total, STAR)) if star else total
+
     if text == "*":
         return STAR
-    if text.startswith("*"):
+    if text.startswith("*") and text[1:].isdigit():
         return nimber(int(text[1:]))
-    if text == "^":
-        return UP
-    if text == "v":
-        return DOWN
+
+    # A number glued onto an infinitesimal, e.g. "1*" or "-1/2Tiny(1)". Bare
+    # numbers fall through to the final line, since the remainder is empty.
+    found = _LEADING_NUMBER.fullmatch(text)
+    if found is not None and found.group(2):
+        return canonical(add(number(Fraction(found.group(1))), parse(found.group(2))))
 
     return number(Fraction(text))

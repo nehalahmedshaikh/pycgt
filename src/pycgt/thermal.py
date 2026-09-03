@@ -36,6 +36,7 @@ from .values import as_number, is_number, number
 __all__ = [
     "Thermograph",
     "cool",
+    "freeze",
     "heat",
     "mean",
     "overheat",
@@ -196,10 +197,41 @@ def cool(g: Game, t: Fraction) -> Game:
         return g
 
     graph = thermograph(g)
-    if t >= graph.temperature:
+    # Strictly greater, not `>=`. *At* the temperature the recursion still
+    # applies and generally leaves an infinitesimal on top of the mast: cooling
+    # `+-1` by exactly 1 gives `{0|0}` = `*`, not 0. Freezing early threw that
+    # away, which is precisely what `freeze` evaluates, so `freeze(+-1)`
+    # returned 0 where it should return `*`.
+    if t > graph.temperature:
         return number(graph.mast)
 
     tax = number(t)
     left = frozenset(add(cool(l, t), negate(tax)) for l in g.left)
     right = frozenset(add(cool(r, t), tax) for r in g.right)
     return game(left, right)
+
+
+def freeze(g: Game) -> Game:
+    """``g`` cooled by its own temperature.
+
+    The result is always infinitesimally close to a number -- the mean -- which
+    is what "frozen" means: no heat is left to fight over.
+
+    A number is already frozen and is returned unchanged. That case needs
+    handling rather than falling out: by the convention here a number with
+    denominator ``2**k`` has temperature ``-1/2**k``, and :func:`cool` refuses
+    a negative amount.
+
+    >>> from pycgt.notation import parse, render
+    >>> from pycgt.values import plus_minus
+    >>> render(freeze(plus_minus(1)))
+    '*'
+    >>> render(freeze(parse("{2|-1/2}")))
+    '3/4*'
+    >>> render(freeze(parse("1"))), render(freeze(parse("^")))
+    ('1', '^')
+    """
+    t = temperature(g)
+    if t < 0:
+        return canonical(g)
+    return cool(g, t)

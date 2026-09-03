@@ -56,8 +56,10 @@ dependencies, so it also runs unchanged under Pyodide in a browser.
 | **Stops** | left/right stops, confusion intervals, infinitesimality, hot/tepid tests |
 | **Reduced form** | reduced canonical form, and `ish` — the infinitesimal remainder |
 | **Thermography** | heating, overheating, cooling, temperature, mean value |
-| **Structure** | all-small games, maximal incentives, the census of games born by day *n* |
-| **Notation** | render to readable text, and parse it back |
+| **Structure** | all-small games, incentives, stop counts, tempering, followers, the census |
+| **Products** | the Norton product — a game's worth in copies of any unit |
+| **Other sums** | conjunctive (move in both) and selective (move in either or both) |
+| **Notation** | render to readable text, and parse it back — including the multi-bar form |
 | **Rulesets** | Domineering, Cram, Clobber, Toads-and-Frogs, Col, Snort, Nim, Blue-Red Hackenbush |
 | **Misère play** | nim values, misère nim values, the genus, tame/wild — for impartial games |
 | **Heap games** | octal (take-and-break) games, subtraction games, Kayles, Dawson's Chess, Grundy's Game |
