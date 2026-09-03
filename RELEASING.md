@@ -14,6 +14,11 @@ $ python examples/berlekamp_1988.py        # the worked example still runs
 Bump `version` in `pyproject.toml`, move the `Unreleased` heading in
 `CHANGELOG.md` down to the new version, and date it.
 
+On Windows, edit those files with something that writes UTF-8 **without** a
+BOM. Windows PowerShell 5.1's `Set-Content -Encoding utf8` adds one, and a BOM
+at the start of `pyproject.toml` makes every TOML parser reject the file with
+`Invalid statement (at line 1, column 1)`.
+
 ## Build and verify
 
 ```console

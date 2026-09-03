@@ -56,10 +56,17 @@ dependencies, so it also runs unchanged under Pyodide in a browser.
 | **Stops** | left/right stops, confusion intervals, infinitesimality, hot/tepid tests |
 | **Reduced form** | reduced canonical form, and `ish` — the infinitesimal remainder |
 | **Thermography** | heating, overheating, cooling, temperature, mean value |
+| **Structure** | all-small games, maximal incentives, the census of games born by day *n* |
 | **Notation** | render to readable text, and parse it back |
-| **Rulesets** | Domineering, Cram, Clobber, Toads-and-Frogs, Nim, Blue-Red Hackenbush |
+| **Rulesets** | Domineering, Cram, Clobber, Toads-and-Frogs, Col, Snort, Nim, Blue-Red Hackenbush |
 | **Reachability** | was a position arrived at by legal alternating play? with replay certificates |
 | **Drawing** | thermographs as dependency-free SVG, rendered inline in notebooks |
+
+The rulesets span four different board shapes on purpose, because each one
+stresses the core differently: grids of empty cells (Domineering, Cram), grids
+of coloured stones that *move* (Clobber), directed strips (Toads-and-Frogs),
+and arbitrary graphs (Col, Snort). Each needs its own notion of symmetry, and
+getting that wrong silently corrupts the memo table.
 
 Games are only **partially** ordered, so `<=` and `>=` are defined but `<` and
 `>` deliberately are not — `not (G <= H)` does not imply `G > H`. Use
@@ -133,9 +140,21 @@ here is trusted because it looks right. The test suite validates against
 - **Closed forms** — Nim sums follow exclusive-or; Hackenbush strings give the
   expected dyadic rationals; Cram values are nimbers.
 
+- **The census** — `born_by(2)` must be exactly 22, the published count. This
+  is the strictest test here: 256 raw expressions have to collapse onto 22
+  values, so any error in domination or reversibility changes the number.
+- **Exhaustive comparison where it's affordable** — Toads-and-Frogs was checked
+  against CGSuite on *every* position of length 1 to 5, all 363.
+
 Plus internal laws that catch real bugs: `G + (−G) = 0`, transposing a
-Domineering board negates its value, `ish(G)` is *always* infinitesimal, and
-canonical form is idempotent.
+Domineering board negates its value, `ish(G)` is *always* infinitesimal,
+canonical form is idempotent, and reversing a Toads-and-Frogs strip while
+swapping colours negates it.
+
+One methodological note. Comparing our output to CGSuite's *as text* produces
+false disagreements whenever the two name the same value differently. So the
+tests ask **CGSuite to adjudicate equality** with our output instead. That has
+twice exposed a genuine gap in our renderer rather than a phantom bug.
 
 ## Provenance
 

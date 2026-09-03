@@ -335,6 +335,55 @@ def canonical(g: Game) -> Game:
 
 
 @cache
+def is_all_small(g: Game) -> bool:
+    """True if, in every subposition, Left can move exactly when Right can.
+
+    All-small games never hand either player a free move, so they are
+    infinitesimal. The converse fails: ``tiny-2`` is infinitesimal but not
+    all-small, because the number ``-2`` sits inside it and offers Right a move
+    where Left has none.
+
+    >>> from pycgt.values import STAR, UP, number, tiny
+    >>> is_all_small(STAR), is_all_small(UP)
+    (True, True)
+    >>> is_all_small(number(1)), is_all_small(tiny(2))
+    (False, False)
+    """
+    if bool(g.left) != bool(g.right):
+        return False
+    return all(is_all_small(option) for option in list(g.left) + list(g.right))
+
+
+@cache
+def incentives(g: Game) -> frozenset[Game]:
+    """The maximal incentives of ``g``.
+
+    A *Left incentive* is ``G^L - G`` and a *Right incentive* is ``G - G^R``:
+    what a player gains by moving there. Only the maximal ones bear on play, so
+    only those are returned, which is also the convention CGSuite reports.
+
+    >>> from pycgt.notation import render
+    >>> from pycgt.values import plus_minus
+    >>> sorted(render(i) for i in incentives(plus_minus(1)))
+    ['{2|0}']
+    >>> incentives(ZERO)
+    frozenset()
+    """
+    candidates = [add(l, negate(g)) for l in g.left]
+    candidates += [add(g, negate(r)) for r in g.right]
+    # Deduplicate by *value* before filtering. Two incentives can be equal
+    # while being distinct objects -- 1/2 has Left incentive 0 - 1/2 and Right
+    # incentive 1/2 - 1, both -1/2, built from different sums -- and an
+    # identity-based filter would let each eliminate the other, returning
+    # nothing. The option sets inside `canonical` are frozensets, so they
+    # cannot contain equal-but-distinct members and are unaffected.
+    distinct = set(candidates)
+    return frozenset(
+        c for c in distinct if not any(o != c and geq(o, c) for o in distinct)
+    )
+
+
+@cache
 def birthday(g: Game) -> int:
     """The day ``g`` is born: 0 for the empty game, else one past its options."""
     options = list(g.left) + list(g.right)

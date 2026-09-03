@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-03
+
 ### Added
 
 - **Reachability** (`pycgt.rulesets.reachable`): decide whether a placement-game
@@ -34,6 +36,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Thermograph drawing** (`pycgt.draw`): thermographs as dependency-free SVG,
   rendered inline in Jupyter. Drawn from the exact breakpoints rather than
   sampled, so the lines are where the mathematics puts them.
+- **Col and Snort** (`pycgt.rulesets.graphs`), partizan colouring games on an
+  arbitrary graph — a fourth board shape. The two rules differ in one word:
+  Col forbids colouring next to your *own* colour, Snort next to your
+  *opponent's*. Col comes out cold, Snort hot. All ten Snort values and nine
+  Col values match CGSuite.
+- **The census** (`pycgt.census`): every distinct game born by day *n*.
+  `born_by(2)` gives **22**, matching the published sequence 1, 4, 22, 1474 —
+  the most demanding test here, since 256 raw expressions must collapse onto
+  exactly 22 values and any slip in domination or reversibility changes the
+  count. Day 3 is refused rather than attempted; it needs `2**22` subsets a
+  side.
+- `is_all_small`: whether Left can move exactly when Right can, in every
+  subposition. All-small implies infinitesimal but not conversely — `tiny-2`
+  is the standard counterexample.
+- `incentives`: the maximal Left and Right incentives, matching CGSuite's
+  convention.
 
 ### Changed
 

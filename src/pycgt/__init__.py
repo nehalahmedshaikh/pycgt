@@ -32,6 +32,8 @@ from .game import (
     game,
     geq,
     greater,
+    incentives,
+    is_all_small,
     leq,
     multiple,
     negate,
@@ -67,7 +69,7 @@ from .values import (
     up_multiple,
 )
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     # core
@@ -89,6 +91,8 @@ __all__ = [
     "confused",
     "compare",
     "outcome",
+    "incentives",
+    "is_all_small",
     # numbers and named values
     "number",
     "integer",
