@@ -156,6 +156,35 @@ def test_render_recognises_number_plus_infinitesimal():
     assert render(add(number("1/2"), UP)) == "1/2^"
 
 
+def test_render_recognises_plus_minus_of_non_numbers():
+    """A switch whose Right options are the negatives of its Left options is
+    +-X, whatever X is. CGSuite prints Clobber's xoxo row this way."""
+    assert render(parse("{*,^|*,v}")) == "+-{*,^}"
+    assert render(parse("{1|-1}")) == "+-1"
+    assert render(parse("{1/2|-1/2}")) == "+-1/2"
+
+
+def test_up_against_down_collapses_to_star():
+    """{^|v} is not a switch: both options reverse out to 0, leaving *."""
+    assert parse("{^|v}") == STAR
+    assert render(parse("{^|v}")) == "*"
+
+
+def test_parse_accepts_plus_minus_with_a_braced_argument():
+    assert parse("+-{*,^}") == parse("{*,^|*,v}")
+    assert render(parse("+-{*,^}")) == "+-{*,^}"
+
+
+def test_plus_minus_star_is_zero():
+    """Not a rendering quirk: -* is *, so {*|*} really is 0."""
+    assert parse("+-*").is_zero
+    assert render(parse("+-*")) == "0"
+
+
+def test_asymmetric_switches_still_print_in_braces():
+    assert render(parse("{2|-1/2}")) == "{2|-1/2}"
+
+
 def test_parse_accepts_nested_braces_and_option_lists():
     assert parse("{{2|0}|0}") == miny(2)
     assert parse("{0,*|1}") == parse("{0,*|1}")

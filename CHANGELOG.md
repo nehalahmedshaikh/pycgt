@@ -18,6 +18,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A published 28-cell Domineering position of temperature 33/16 in the test
   suite, exercising the value computation, the thermograph, and the
   reachability search on a 60-cell filled region.
+- **Clobber** (`pycgt.rulesets.clobber`), the first ruleset where pieces move
+  and capture rather than being placed. It needs its own board type — a
+  colouring rather than a set of empty cells — which generalises the library
+  beyond placement games. Clobber is all-small, so every value is an
+  infinitesimal. All sixteen test values were produced by CGSuite, which was
+  then asked to adjudicate equality with our own output, so notation
+  differences could not mask a disagreement.
+
+### Changed
+
+- `render` now recognises `+-X` for any `X`, not just numbers: a switch whose
+  Right options are exactly the negatives of its Left options prints as
+  `+-{*,^}` rather than `{*,^|*,v}`, matching CGSuite. `parse` accepts the
+  braced form.
 
 ## [0.1.0] — 2026-09-03
 

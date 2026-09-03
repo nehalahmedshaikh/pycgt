@@ -57,7 +57,7 @@ dependencies, so it also runs unchanged under Pyodide in a browser.
 | **Reduced form** | reduced canonical form, and `ish` — the infinitesimal remainder |
 | **Thermography** | heating, overheating, cooling, temperature, mean value |
 | **Notation** | render to readable text, and parse it back |
-| **Rulesets** | Domineering, Cram, Nim, Blue-Red Hackenbush |
+| **Rulesets** | Domineering, Cram, Clobber, Nim, Blue-Red Hackenbush |
 | **Reachability** | was a position arrived at by legal alternating play? with replay certificates |
 
 Games are only **partially** ordered, so `<=` and `>=` are defined but `<` and

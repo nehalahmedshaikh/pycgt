@@ -96,13 +96,18 @@ def render(g: Game) -> str:
         if rest is not None:
             return f"{_format(rest)}{name}"
 
-    # a switch: one option each side, both numbers, Left's above Right's
+    # A switch +-X, where Right's options are exactly the negatives of Left's.
+    # This covers +-1 and also cases whose arguments are not numbers, such as
+    # +-{*,^}, which is how Clobber's four-stone row prints.
+    if c.left and c.right == frozenset(canonical(negate(x)) for x in c.left):
+        inner = ",".join(sorted(render(x) for x in c.left))
+        return f"+-{inner}" if len(c.left) == 1 else f"+-{{{inner}}}"
+
+    # An asymmetric switch between two numbers.
     if len(c.left) == 1 and len(c.right) == 1:
         (l,), (r,) = tuple(c.left), tuple(c.right)
         a, b = as_number(l), as_number(r)
         if a is not None and b is not None and a > b:
-            if a == -b:
-                return f"+-{_format(a)}"
             return f"{{{_format(a)}|{_format(b)}}}"
 
     # Spacing follows CGSuite's convention, so output can be compared directly.
@@ -169,9 +174,12 @@ def parse(text: str) -> Game:
         return game(_parse_options(left_text), _parse_options(right_text))
 
     if text.startswith("+-"):
-        from .values import plus_minus
-
-        return plus_minus(text[2:].strip())
+        argument = text[2:].strip()
+        if argument.startswith("{") and argument.endswith("}"):
+            options = _parse_options(argument[1:-1])
+        else:
+            options = [parse(argument)]
+        return game(options, [negate(o) for o in options])
 
     if text == "*":
         return STAR
