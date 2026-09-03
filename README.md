@@ -59,6 +59,8 @@ dependencies, so it also runs unchanged under Pyodide in a browser.
 | **Structure** | all-small games, maximal incentives, the census of games born by day *n* |
 | **Notation** | render to readable text, and parse it back |
 | **Rulesets** | Domineering, Cram, Clobber, Toads-and-Frogs, Col, Snort, Nim, Blue-Red Hackenbush |
+| **Misère play** | nim values, misère nim values, the genus, tame/wild — for impartial games |
+| **Heap games** | octal (take-and-break) games, subtraction games, Kayles, Dawson's Chess, Grundy's Game |
 | **Reachability** | was a position arrived at by legal alternating play? with replay certificates |
 | **Drawing** | thermographs as dependency-free SVG, rendered inline in notebooks |
 
@@ -93,6 +95,17 @@ $ python examples/berlekamp_1988.py
   ok    G_3 = +-1 + 2*tiny-2
 ```
 
+[`examples/misere_genus.py`](examples/misere_genus.py) prints the genus tables
+for Kayles and Dawson's Chess and checks Guy and Smith's periodicity results
+and misère Nim's closed form.
+
+```console
+$ python examples/misere_genus.py
+  ok    Dawson's Chess has period 34, failing only at [14, 16, 31, 34, 51]
+  ok    Kayles has period 12 from n = 72, and not before
+  ok    all 70 positions of up to four heaps agree
+```
+
 ## Reachability
 
 Some authors count any finite region as a Domineering position; a stricter
@@ -123,6 +136,53 @@ makes it tractable: placements never overlap, so any partition of the filled
 region into legal shapes can be replayed in *any* order, and alternation
 constrains only the counts.
 
+## Misère play
+
+Under misère play the player who cannot move **wins**. That single sign flip
+demolishes the normal-play theory, and the reason is worth seeing directly:
+
+```python
+>>> from pycgt.impartial import add, nim_heap, nim_value, misere_outcome, genus
+>>> two_heaps = add(nim_heap(2), nim_heap(2))
+>>> nim_value(two_heaps), nim_value(nim_heap(0))       # normal play: both zero
+(0, 0)
+>>> misere_outcome(two_heaps)
+<Outcome.SECOND: 'second player'>
+>>> misere_outcome(nim_heap(0))                        # ... but opposite here
+<Outcome.FIRST: 'first player'>
+```
+
+So misère analysis cannot use `Game`, which is canonical by construction and
+would collapse the first position to the second. `pycgt.impartial` applies no
+reduction at all.
+
+What replaces the normal-play theory is the **genus**: a game's nim value
+together with the misère nim values of *G*, *G* + `*2`, *G* + `*2` + `*2`, …
+That sequence always ends up alternating, which is what makes a finite symbol
+possible.
+
+```python
+>>> from pycgt.rulesets.heap import DAWSONS_CHESS, KAYLES, heap
+>>> print(genus(nim_heap(3)))
+3^31
+>>> print(genus(heap(DAWSONS_CHESS, 9)))    # the smallest wild Dawson position
+3^1431
+>>> from pycgt.impartial import is_tame
+>>> is_tame(heap(DAWSONS_CHESS, 5)), is_tame(heap(DAWSONS_CHESS, 9))
+(True, False)
+```
+
+Heap rulesets are given in the standard octal notation, so `0.77` is Kayles and
+`0.137` is Dawson's Chess:
+
+```python
+>>> from pycgt.rulesets.heap import nim_values, octal
+>>> nim_values(octal("0.137"), 14)
+(0, 1, 1, 2, 0, 3, 1, 1, 0, 3, 3, 2, 2, 4)
+>>> nim_values(KAYLES, 12)
+(0, 1, 2, 3, 1, 4, 3, 2, 1, 4, 2, 6)
+```
+
 ## Correctness
 
 The interesting values in this field are easy to get subtly wrong, so nothing
@@ -138,7 +198,16 @@ here is trusted because it looks right. The test suite validates against
 - **Uiterwijk**, [arXiv:1305.3257](https://arxiv.org/pdf/1305.3257) — the
   value of the 11×2 board.
 - **Closed forms** — Nim sums follow exclusive-or; Hackenbush strings give the
-  expected dyadic rationals; Cram values are nimbers.
+  expected dyadic rationals; Cram values are nimbers; misère Nim follows the
+  classical rule, checked on every position with up to four heaps.
+- **Guy and Smith (1956)** — the nim values of Dawson's Chess have period 34
+  with exceptions only at *n* = 14, 16, 31, 34, 51, and Kayles becomes periodic
+  with period 12 from *n* = 72. Both are reproduced here, and neither owes
+  anything to CGSuite.
+- **CGSuite, for misère play** — nim values, misère nim values, genus symbols
+  and tameness for Kayles, Dawson's Chess, Grundy's Game, Treblecross and
+  Officers. The genus *superscript sequences* are compared term by term, which
+  is over a thousand separate values.
 
 - **The census** — `born_by(2)` must be exactly 22, the published count. This
   is the strictest test here: 256 raw expressions have to collapse onto 22
@@ -168,9 +237,25 @@ of its implementation was used or ported. This library is MIT.
 Honest about scope:
 
 - **Short games only.** No loopy games, stoppers, or `on`/`off`.
-- **No misère theory** and no misère quotients.
+- **Misère play covers impartial games only** — nim values, misère nim values,
+  the genus, tame/wild. No partizan misère theory, no misère canonical forms,
+  and no misère quotients.
+- **The genus is the classical one**, not CGSuite's *extended* genus. The two
+  agree on the nim value and on the superscript sequence, which is what this
+  library computes; CGSuite's printed symbol carries more. Kayles heaps 7, 10,
+  14 and 19 all have nim value 2 and the identical superscript sequence
+  `2 0 2 0 …` (checked to 17 terms), yet CGSuite prints `2^2`, `2^2`, `2^2` and
+  `2^20`. For the same reason `is_tame` is the genus-based notion and is
+  strictly weaker than CGSuite's `IsTame`.
+- **Misère values are expensive**, unavoidably: nothing may be reduced, so the
+  trees are the full game trees. Kayles heaps are comfortable to about 30.
 - **Slower than CGSuite**, which is a JVM program with far more optimisation.
   Expect exact Domineering values up to about 2×16 comfortably.
+- **`Game` equality walks the tree**, so games with very many options get
+  expensive: naming `1 + *12` costs tens of millions of recursive comparisons
+  inside the comparison cache. It does not bite for the values real rulesets
+  produce, whose canonical forms are small, and `pycgt.impartial` avoids it by
+  interning — which is the obvious fix for the core too, and not done yet.
 - **The number-temperature convention** (a number with denominator `2**k` has
   temperature `−1/2**k`) is checked against CGSuite for `0` and `1/2` only.
 

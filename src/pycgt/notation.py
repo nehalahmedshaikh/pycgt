@@ -20,13 +20,40 @@ def _format(x: Fraction) -> str:
     return str(x.numerator) if x.denominator == 1 else f"{x.numerator}/{x.denominator}"
 
 
+def _star(n: int) -> str:
+    return "0" if n == 0 else "*" if n == 1 else f"*{n}"
+
+
+@cache
+def _as_nimber(g: Game) -> int | None:
+    """If ``g`` is the nimber ``*n``, return ``n``; else None.
+
+    Detected structurally and without a bound. A fixed table of small nimbers
+    is not enough: every nimber is its own negative, so any nimber the table
+    missed used to be caught by the ``+-X`` switch rule instead and printed as
+    ``+-{*,*2,*3,*4,*5,0}``.
+    """
+    if not g.left and not g.right:
+        return 0
+    if g.left != g.right:
+        return None
+    seen = set()
+    for option in g.left:
+        value = _as_nimber(option)
+        if value is None:
+            return None
+        seen.add(value)
+    return len(seen) if seen == set(range(len(g.left))) else None
+
+
 @cache
 def _named() -> dict[Game, str]:
-    """Small library of values with conventional names."""
+    """Small library of values with conventional names.
+
+    Nimbers are deliberately absent: :func:`_as_nimber` handles them all, so
+    there is no cap here to fall off.
+    """
     table: dict[Game, str] = {}
-    for n in range(6):
-        name = "0" if n == 0 else "*" if n == 1 else f"*{n}"
-        table[canonical(nimber(n))] = name
     table[canonical(UP)] = "^"
     table[canonical(DOWN)] = "v"
     table[canonical(add(UP, STAR))] = "^*"
@@ -76,6 +103,12 @@ def render(g: Game) -> str:
     if value is not None:
         return _format(value)
 
+    # Nimbers must be recognised before the switch rule below, because every
+    # nimber is its own negative and so matches that rule's pattern.
+    star = _as_nimber(c)
+    if star is not None:
+        return _star(star)
+
     names = _named()
     if c in names:
         return names[c]
@@ -88,7 +121,17 @@ def render(g: Game) -> str:
     if argument is not None:
         return f"Miny({render(argument)})"
 
-    # a number plus a named infinitesimal, e.g. "1*" or "1/2^"
+    # A number plus a nimber, e.g. "1*" or "3/4*6". The options are the same on
+    # both sides, and exactly one of them -- the ``k = 0`` case -- is a number,
+    # since ``x + *k`` is not a number for positive ``k``. That names the only
+    # candidate, so it can be built once and compared. Subtracting the nimber
+    # instead is quadratic in it and unusably slow past about ``*8``.
+    if c.left and c.left == c.right:
+        found = [value for value in map(as_number, c.left) if value is not None]
+        if len(found) == 1 and add(number(found[0]), nimber(len(c.left))) == c:
+            return f"{_format(found[0])}{_star(len(c.left))}"
+
+    # a number plus a named infinitesimal, e.g. "1^" or "1/2v"
     for named_game, name in names.items():
         if named_game == ZERO:
             continue

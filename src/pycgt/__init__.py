@@ -18,6 +18,7 @@ Every :class:`Game` returned by this package is in canonical form, so ``==``
 means value equality.
 """
 
+from . import impartial
 from .game import (
     ZERO,
     Game,
@@ -69,7 +70,7 @@ from .values import (
     up_multiple,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # core
@@ -131,4 +132,7 @@ __all__ = [
     # notation
     "render",
     "parse",
+    # impartial games and misère play, kept as a module because misère needs
+    # its own uncanonicalised game type and its own `add`
+    "impartial",
 ]

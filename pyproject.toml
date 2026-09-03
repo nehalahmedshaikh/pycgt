@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycgt"
-version = "0.2.0"
+version = "0.3.0"
 description = "Combinatorial game theory in pure Python: exact canonical forms, thermography, and game values"
 readme = "README.md"
 requires-python = ">=3.11"

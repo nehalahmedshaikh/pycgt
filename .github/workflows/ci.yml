@@ -26,8 +26,10 @@ jobs:
         run: pytest -q
       - name: Doctests
         run: pytest -q --doctest-modules src/pycgt
-      - name: Worked example runs
-        run: python examples/berlekamp_1988.py
+      - name: Worked examples run
+        run: |
+          python examples/berlekamp_1988.py
+          python examples/misere_genus.py
 
   lint:
     runs-on: ubuntu-latest
@@ -38,9 +40,11 @@ jobs:
           python-version: "3.12"
       - name: Install
         run: pip install -e ".[dev]"
+      # `examples` is included on purpose: it was omitted here while
+      # RELEASING.md checked it, so lint errors in an example could reach main.
       - name: Ruff
-        run: ruff check src tests
+        run: ruff check src tests examples
       - name: Ruff format check
-        run: ruff format --check src tests
+        run: ruff format --check src tests examples
       - name: Mypy
         run: mypy

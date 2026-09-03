@@ -156,6 +156,32 @@ def test_render_recognises_number_plus_infinitesimal():
     assert render(add(number("1/2"), UP)) == "1/2^"
 
 
+@pytest.mark.parametrize("n", range(20))
+def test_render_names_every_nimber(n):
+    """Regression: nimbers above ``*5`` used to print as switches.
+
+    The named-value table stopped at ``*5``, and every nimber is its own
+    negative, so any nimber past the table matched the ``+-X`` rule instead and
+    ``*6`` printed as ``+-{*,*2,*3,*4,*5,0}``.
+    """
+    expected = "0" if n == 0 else "*" if n == 1 else f"*{n}"
+    assert render(nimber(n)) == expected
+    assert parse(expected) == nimber(n)
+
+
+@pytest.mark.parametrize("n", range(1, 9))
+def test_render_names_a_number_plus_any_nimber(n):
+    """Not bounded at ``*5`` any more, but still kept small on purpose.
+
+    Naming ``x + *n`` needs one game of that size built and compared, and
+    `Game` equality walks the tree structurally, so the cost climbs steeply
+    past about ``*12``. That is a property of the core, not of the renderer.
+    """
+    star = "*" if n == 1 else f"*{n}"
+    assert render(add(integer(1), nimber(n))) == f"1{star}"
+    assert render(add(number(Fraction(3, 4)), nimber(n))) == f"3/4{star}"
+
+
 def test_render_recognises_plus_minus_of_non_numbers():
     """A switch whose Right options are the negatives of its Left options is
     +-X, whatever X is. CGSuite prints Clobber's xoxo row this way."""
