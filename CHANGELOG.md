@@ -26,6 +26,15 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   then asked to adjudicate equality with our own output, so notation
   differences could not mask a disagreement.
 
+- **Toads-and-Frogs** (`pycgt.rulesets.toads_and_frogs`), a partizan strip
+  game and the library's third board shape: a one-dimensional word whose
+  pieces have a *direction*, so neither reflection nor colour exchange alone is
+  a symmetry — reversing the strip and swapping the colours is. Validated
+  against CGSuite on **every** position of length 1 to 5, all 363 of them.
+- **Thermograph drawing** (`pycgt.draw`): thermographs as dependency-free SVG,
+  rendered inline in Jupyter. Drawn from the exact breakpoints rather than
+  sampled, so the lines are where the mathematics puts them.
+
 ### Changed
 
 - `render` now recognises `+-X` for any `X`, not just numbers: a switch whose

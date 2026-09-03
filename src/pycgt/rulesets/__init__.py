@@ -4,7 +4,7 @@ The rulesets exist to exercise the core: each one has published values or a
 known closed form, so they double as the library's validation suite.
 """
 
-from . import clobber, cram, domineering, nim
+from . import clobber, cram, domineering, nim, toads_and_frogs
 from .grid import Position, Ruleset, value
 from .reachable import Move, Replay, reachable_from_rectangle, verify_replay
 
@@ -18,6 +18,7 @@ __all__ = [
     "domineering",
     "nim",
     "reachable_from_rectangle",
+    "toads_and_frogs",
     "value",
     "verify_replay",
 ]
